@@ -1,13 +1,16 @@
 {
   "name": "seeem",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A showcase on how user data from different websites can be easily tracked and displayed.",
   "main": "server.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/Artenuvielle/seeem"
   },
-  "author": "René Martin <renem1@gmx.net>",
+  "author": {
+    "name": "René Martin",
+    "email": "renem1@gmx.net"
+  },
   "dependencies": {
     "evercookie": ">= 0.3.0",
     "express": ">= 3.2.4",
@@ -16,6 +19,18 @@
     "useragent": ">= 2.1.3",
     "ws": ">= 0.6.5",
     "cors": ">= 2.5.2",
-    "mysql": ">= 2.5.4"
-  }
+    "mysql": ">= 2.5.4",
+	"cookie-parser": ">= 1.3.3"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "readme": "See'em\n======\n\nSee'em is a web service which provides a JavaScript file for monitoring users from different websites. The service itself is build for node.js and requires a MySQL database for storing user data and some plugins for node.js.\n\nTo install use:\n    npm install seeem\n\nWhat can be monitored?\n----------------------\n\nEverything which can be read by JavaScript running on the clients browser and also all data which is parsed upon HTTP-Requests to the server. Currently the following data is being gathered:\n* OS type and version\n* Browser type and version\n* Geo-data gathered by http://ipinfo.io/\n* URL of calling website\n* Connecting and disconnecting\n* Mouse position and browser tab state\n\nAll of this data is send to the server and can be displayed in realtime on the dashboard.\n\n\nAdditional Information\n----------------------\n\nThis project was developed for pure functionality and with no respect of coding style or maintainability.",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/Artenuvielle/seeem/issues"
+  },
+  "homepage": "https://github.com/Artenuvielle/seeem",
+  "_id": "seeem@0.0.0",
+  "_from": "seeem@"
 }
