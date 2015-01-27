@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+  <style type="text/css">
+  
+    body {
+      background:#2D3035;
+      color:#ddd;
+      font-family: "Open Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+      text-transform: uppercase;
+    }
+    
+    .infobox {
+	    position: relative;
+      padding:0;
+    }
+    
+    .resizebox {
+	    position: relative;
+    }
+    
+    .infobox>div {
+      margin:10px;
+      background:#404348;
+      border-radius: 15px;
+      text-shadow: 2px 2px #333;
+    }
+    
+    .resizebox>div {
+    	position:  absolute;
+    	top: 0;
+    	left: 0;
+    	bottom: 0;
+    	right: 0;
+    }
+    
+    .resizebox:before{
+    	content: "";
+    	display: block;
+    	padding-top: 100%; 	/* initial ratio of 1:1*/
+    }
+    
+    .ratio2_1:before{
+    	padding-top: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 align="center">see 'em</h1>
+    <div class="row">
+      <div class="infobox col-md-12">
+        <div>
+          <div id="map" style="text-shadow:none;color:black;text-transform:none"></div>
+        </div>
+      </div>
+      <div class="infobox col-md-4 resizebox">
+        <div>
+          <h4 style="padding:20px 20px 0 20px;">Currently active sessions</h3>
+          <div style="margin:0 50px;">
+            <div id="connections" style="font-size:30px;width:100%;text-align:center">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="infobox col-md-8 resizebox ratio2_1">
+        <div>
+          <h4 style="padding:20px 20px 0 20px;">pages / second: <span id="pagespersecond">0</span></h3>
+          <div style="margin:0 50px;height:75%">
+            <div id="pagespersecondgraph" style="position:relative;margin-top:15px;height:100%;border:3px solid #fff"></div>
+          </div>
+        </div>
+      </div>
+      <div class="infobox col-md-12 resizebox ratio2_1">
+        <div style="padding:20px">
+          <div id="heat" style="height:100%;border:3px solid #fff"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script type="text/javascript" src="js/heatmap.min.js"></script>
+  <script type="text/javascript" src="js/d3.min.js"></script>
+  <script type="text/javascript" src="js/topojson.min.js"></script>
+  <script type="text/javascript" src="js/datamaps.js"></script>
+  <script type="text/javascript" src="js/primus.js"></script>
+  <script type="text/javascript">
+    var bombMap = new Datamap({
+      element: document.getElementById('map'),
+      scope: 'world',
+      geographyConfig: {
+          popupOnHover: false,
+          borderColor: '#000',
+          highlightOnHover: false
+      },
+      fills: {
+          'opera':'#CC0F16',
+          'chrome':'#0A0',
+          'ff':'#FF7F00',
+          'ie':'#0CF',
+          'other':'#000',
+          defaultFill: '#EEE'
+      },
+      responsive: true
+    });
+    
+    //draw bubbles for bombs
+    var bubbleTemplate = {
+        popupTemplate: function (geo, d) { 
+                return ['<div class="hoverinfo"><span style="font-weight:bold">' +  d.hostname + '</span>',
+                '<br/>ip: ' +  d.ip + '',
+                '<br/>location: ' +  d.location + '',
+                '<br/>Country: ' +  d.country + '',
+                '<br/>Region: ' +  d.region + '',
+                '<br/>Postal: ' +  d.postal + '',
+                '<br/>City: ' +  d.city + '',
+                '<br/>Browser: ' +  d.browserfamily + ' ',
+                d.browsermajor + '.' + d.browserminor + '.' + d.browserpatch,
+                '<br/>OS: ' +  d.osfamily + ' ',
+                d.osversionmajor + '.' + d.osversionminor + '.' + d.osversionpatch,
+                '<br/>Device: ' +  d.device + '',
+                '</div>'].join('');
+        }
+    };
+    
+    var data = [];
+    var pageviewsinlastsecond = 0;
+    var ppsvals = [];
+    for(var i = 0; i < 100; i++) {
+      ppsvals[i] = 0;
+    }
+    
+    function getIndexOfSID(sid) {
+      for(var i = 0; i < data.length; i++) {
+        if(data[i].sessid == sid) {
+          return i
+        }
+      }
+      return undefined;
+    }
+    
+    $(document).ready(function() {
+      $(window).on('resize', function() {
+        bombMap.resize();
+        heatmap.repaint();
+         
+        $('#connections').css('font-size',($("#connections").parent().parent().height() * 0.6)+'px');
+      });
+      
+      $('#connections').css('font-size',($("#connections").parent().parent().height() * 0.6)+'px');
+      
+    
+      var updateSessionNumber = function() {
+        $('#connections').html(data.length);
+      };
+      
+      var updateBubbles = function() {
+        var bombs = [];
+        for(var i = 0; i < data.length; i++) {
+          if(data[i].loc !== null) {
+            if(!data[i].latitude || !data[i].longitude) {
+              var locdata = data[i].loc.split(',');
+              data[i].latitude = parseFloat(locdata[0]);
+              data[i].longitude = parseFloat(locdata[1]);
+            }
+            data[i].radius = 10;
+            if(!data[i].fillKey) {
+              switch(data[i].browserfamily) {
+                case 'Firefox':
+                  data[i].fillKey = 'ff';
+                  break;
+                case 'Opera':
+                  data[i].fillKey = 'opera';
+                  break;
+                case 'Chrome':
+                  data[i].fillKey = 'chrome';
+                  break;
+                case 'Internet Explorer':
+                  data[i].fillKey = 'ie';
+                  break;
+                default:
+                  data[i].fillKey = 'other';
+              }
+            }
+            bombs.push(data[i]);
+          }
+        }
+        bombMap.bubbles(bombs, bubbleTemplate);
+      };
+      
+      var heatmap = h337.create({
+        container: document.getElementById('heat')
+      });
+      var updateHeatMap = function() {
+        var mouses = [];
+        for(var i = 0; i < data.length; i++) {
+          if(data[i].istabvisible && data[i].mousex !== null && data[i].mousey !== null) {
+            mouses.push({
+              x: data[i].mousex,
+              y: data[i].mousey,
+              value: 1
+            });
+          }
+        }
+        heatmap.setData({
+          max: mouses.length * 0.8,
+          data: mouses
+        });
+      };
+      
+      var redrawPPSGraph = function() {
+        ppsvals.shift();
+        ppsvals[ppsvals.length] = pageviewsinlastsecond;
+        console.log(ppsvals);
+        var max = Math.max(Math.max.apply(null, ppsvals),1)*3/2;
+        console.log(max);
+        var s = '';
+        for(var i = 0; i < 100; i++) {
+          var v = 'height:0%';
+          var bg = '';
+          var m = 'height:100%';
+          if(ppsvals[i] != 0) {
+            v = 'height:' + (ppsvals[i] / max * 100) + '%';
+            bg = 'white';
+            m = 'height:' + ((1 - ppsvals[i] / max) * 100) + '%';
+          }/*position:absolute;bottom:0px;left:'+(i-1)+'%;*/
+          s = '<div style="padding:2px;float:left;width:1%;height:100%"><div style="background:#555;width:100%;' + m + '"></div><div style="width:100%;' + v + ';background:' + bg + '"></div></div>' + s;
+        }
+        $('#pagespersecondgraph').html(s);
+      }
+      
+      redrawPPSGraph();
+      setInterval(function() {
+        redrawPPSGraph();
+      }, 50);
+      
+      setInterval(function() {
+        $('#pagespersecond').html(pageviewsinlastsecond);
+        pageviewsinlastsecond = 0;
+      }, 1000);
+      
+      var primus = Primus.connect();
+      primus.on('open',function() {
+        primus.write({ type: 'dashboardconnect' });
+        primus.on('data', function(message) {
+          console.log('received a new message: ', message);
+          if(message['event']) {
+            switch(message['event']) {
+              case 'newsession':
+                data.push(message['data']);
+                updateSessionNumber();
+                updateBubbles();
+                pageviewsinlastsecond++;
+                break;
+              case 'updatesession':
+                var index = getIndexOfSID(message['sid']);
+                data[index] = message['data'];
+                switch(message['originalevent']) {
+                  case 'location':
+                    updateBubbles();
+                    break;
+                  case 'mouse':
+                  case 'tabstatechanged':
+                    updateHeatMap();
+                    break;
+                }
+                break;
+              case 'endsession':
+                var index = getIndexOfSID(message['sid']);
+                data = data.slice(index,1);
+                updateSessionNumber();
+                updateBubbles();
+                break;
+              default:
+                console.log('Dashboerd received message with unknown name: ' + message['event']);
+            }
+          }
+        });
+      	window.onbeforeunload = function() { primus.end(); };
+      });
+    });
+  </script>
+</body>
