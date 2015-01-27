@@ -1,6 +1,6 @@
 {
   "name": "seeem",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A showcase on how user data from different websites can be easily tracked and displayed.",
   "main": "server.js",
   "repository": {
@@ -12,15 +12,15 @@
     "email": "renem1@gmx.net"
   },
   "dependencies": {
-    "evercookie": ">= 0.3.0",
-    "express": ">= 3.2.4",
-    "primus": ">= 2.4.12",
-    "primus-callbacks": ">= 2.1.3",
-    "useragent": ">= 2.1.3",
-    "ws": ">= 0.6.5",
-    "cors": ">= 2.5.2",
-    "mysql": ">= 2.5.4",
-	"cookie-parser": ">= 1.3.3"
+    "evercookie": "0.3.0",
+    "express": "3.2.4",
+    "primus": "2.4.12",
+    "primus-callbacks": "2.1.3",
+    "useragent": "2.1.3",
+    "ws": "0.6.5",
+    "cors": "2.5.2",
+    "mysql": "2.5.4",
+    "cookie-parser": "1.3.3"
   },
   "scripts": {
     "start": "node server.js"
@@ -31,6 +31,6 @@
     "url": "https://github.com/Artenuvielle/seeem/issues"
   },
   "homepage": "https://github.com/Artenuvielle/seeem",
-  "_id": "seeem@0.0.0",
+  "_id": "seeem@0.0.1",
   "_from": "seeem@"
 }
